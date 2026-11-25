@@ -13,7 +13,7 @@
 </style>
 <script>
   const CONFIG = {
-    ENDPOINT: 'https://script.google.com/macros/s/AKfycbwFPhhw_cF0fQl6ijonro92fuP1m5c18QtDEV1QB_3bG3-0T-fiW6yvuSPCyUQ2ChV-mQ/exec',
+    ENDPOINT: 'https://script.google.com/macros/s/AKfycbyZXHqaz5obH25cZIykB0K6mZh-5_h41rIxSJzYPE6HqUuEjmHes1J7KMJhaFeKfABp1g/exec',
     MAX_CHARS: 1500
   };
 </script>
@@ -101,12 +101,29 @@
           <label><input type="radio" name="tema" value="Outro"><span>Outro</span></label>
         </div>
 
+        <div id="paraArea" class="hidden">
+          <label id="lblPara">Para quem vai sua pergunta? <span style="font-weight:400;color:var(--mute)">(opcional)</span></label>
+          <div class="temas" id="paraOpcoes" role="radiogroup" aria-labelledby="lblPara">
+            <label><input type="radio" name="para" value="" checked><span>Liderança (geral)</span></label>
+          </div>
+          <p id="paraNota" style="margin:-6px 0 16px;font-size:13px;color:var(--mute)">
+            Escolhendo um nome, a pergunta vai direto e <strong>só</strong> para essa pessoa — continua anônima.
+          </p>
+        </div>
+
         <label for="pergunta">Sua pergunta ou dúvida</label>
         <textarea id="pergunta" name="pergunta" required
           placeholder="Escreva aqui com sinceridade. Não precisa se identificar."></textarea>
         <div class="row">
           <span>Evite citar nomes de pessoas.</span>
           <span id="contador">0 / 1500</span>
+        </div>
+
+        <div id="codigoArea" class="hidden" style="margin-top:14px">
+          <label for="codigo">Código do grupo</label>
+          <input id="codigo" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false"
+            placeholder="O líder informa nos encontros"
+            style="width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit;font-size:16px">
         </div>
 
         <!-- armadilha para robôs: humanos não veem este campo -->
@@ -122,8 +139,8 @@
 
     <section id="doneArea" class="done hidden" aria-live="polite">
       <div class="big" aria-hidden="true">🙏</div>
-      <h2>Pergunta enviada!</h2>
-      <p>Obrigado pela coragem. Ela será respondida em um dos nossos encontros.</p>
+      <h2 id="doneTitulo">Pergunta enviada!</h2>
+      <p>Obrigado pela coragem. Ela será lida com carinho pela liderança.</p>
       <button id="outra" type="button">Enviar outra pergunta</button>
     </section>
   </main>
@@ -154,10 +171,33 @@
 
   const ERROS = {
     curta: 'Escreva um pouquinho mais (pelo menos 5 caracteres).',
-    codigo: 'Este link não está completo. Peça o link certo a um líder.',
+    codigo: 'Digite o código do grupo (o líder informa nos encontros) e toque em Enviar de novo.',
     limite: 'Muitas perguntas chegaram agora. Tente de novo em alguns minutos.',
-    interno: 'Não deu certo agora. Tente de novo em instantes.'
+    interno: 'Não deu certo agora. Tente de novo em instantes.',
+    destinatario: 'Essa pessoa não está disponível agora. Escolha outra ou "Liderança (geral)".',
+    envio: 'Não foi possível entregar para essa pessoa hoje. Escolha outra ou "Liderança (geral)".'
   };
+
+  // Carrega do servidor os nomes disponíveis (apenas nomes — os e-mails ficam no Apps Script).
+  (async function carregarDestinatarios(){
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(CONFIG.ENDPOINT)) return;
+    try {
+      const r = await fetch(CONFIG.ENDPOINT + '?acao=destinatarios', { credentials: 'omit', referrerPolicy: 'no-referrer' });
+      const j = await r.json();
+      const lista = (j && Array.isArray(j.destinatarios)) ? j.destinatarios : [];
+      if (!lista.length) return;
+      const box = $('paraOpcoes');
+      lista.forEach(d => {
+        const lab = document.createElement('label');
+        const inp = document.createElement('input');
+        inp.type = 'radio'; inp.name = 'para'; inp.value = String(d.id || '');
+        const sp = document.createElement('span');
+        sp.textContent = String(d.nome || '');
+        lab.appendChild(inp); lab.appendChild(sp); box.appendChild(lab);
+      });
+      $('paraArea').classList.remove('hidden');
+    } catch (e) { /* sem lista: tudo segue para a liderança geral */ }
+  })();
 
   async function enviar(payload){
     const corpo = JSON.stringify(payload);
@@ -183,16 +223,23 @@
       mostrar('err', 'Página ainda não configurada (falta a URL do Apps Script).'); return;
     }
     const temaSel = form.querySelector('input[name="tema"]:checked');
+    const paraSel = form.querySelector('input[name="para"]:checked');
     btn.disabled = true; btn.textContent = 'Enviando…'; msg.className = 'msg';
     try {
       const res = await enviar({
-        pergunta, tema: temaSel ? temaSel.value : '', g: grupo, site: $('site').value
+        pergunta, tema: temaSel ? temaSel.value : '', para: paraSel ? paraSel.value : '',
+        g: ($('codigo').value.trim() || grupo), site: $('site').value
       });
       if (res && res.ok) {
+        $('doneTitulo').textContent = res.para ? ('Pergunta enviada para ' + res.para + '!') : 'Pergunta enviada!';
         form.reset(); atualizar();
         $('formArea').classList.add('hidden'); $('doneArea').classList.remove('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
+        if (res && res.erro === 'codigo') {
+          $('codigoArea').classList.remove('hidden');
+          $('codigo').value = ''; $('codigo').focus();
+        }
         mostrar('err', ERROS[(res && res.erro)] || ERROS.interno);
       }
     } catch (e) {
