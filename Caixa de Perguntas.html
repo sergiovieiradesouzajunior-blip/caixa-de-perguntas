@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>Caixa de Perguntas · Juventude</title>
+<style>
+  /* =========================================================
+     CONFIGURAÇÃO: cole aqui a URL do App da Web do Apps Script
+     ========================================================= */
+</style>
+<script>
+  const CONFIG = {
+    ENDPOINT: 'https://script.google.com/macros/s/AKfycbwFPhhw_cF0fQl6ijonro92fuP1m5c18QtDEV1QB_3bG3-0T-fiW6yvuSPCyUQ2ChV-mQ/exec',
+    MAX_CHARS: 1500
+  };
+</script>
+<style>
+  :root{
+    --bg:#0f1730; --bg2:#1b2550; --card:#ffffff; --ink:#1d2333; --mute:#5d6478;
+    --acc:#f2a93b; --acc2:#e07a2e; --ok:#2e9b62; --err:#c0392b; --line:#e3e6ee;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    background:radial-gradient(1200px 600px at 50% -10%, #2d3a7a 0%, var(--bg2) 40%, var(--bg) 100%) fixed;
+    color:var(--ink); min-height:100vh; min-height:100dvh;
+    display:flex; justify-content:center; align-items:flex-start;
+    padding:max(16px, env(safe-area-inset-top)) 14px max(24px, env(safe-area-inset-bottom));
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{width:100%; max-width:560px}
+  header{color:#fff; text-align:center; margin:12px 0 18px}
+  header .icon{font-size:42px; line-height:1}
+  header h1{margin:8px 0 6px; font-size:clamp(24px,6.5vw,32px); letter-spacing:.3px}
+  header p{margin:0; opacity:.85; font-size:clamp(14px,4vw,16px)}
+  .card{background:var(--card); border-radius:18px; padding:clamp(16px,4.5vw,24px);
+        box-shadow:0 12px 40px rgba(0,0,0,.25)}
+  .badge{display:flex; gap:10px; align-items:flex-start; background:#f3f7ff; border:1px solid #d9e3ff;
+         border-radius:12px; padding:10px 12px; font-size:14px; color:#2b3a67; margin-bottom:16px}
+  label{display:block; font-weight:600; margin:0 0 8px; font-size:15px}
+  .temas{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px}
+  .temas input{position:absolute; opacity:0; pointer-events:none}
+  .temas span{display:inline-block; padding:8px 12px; border:1px solid var(--line); border-radius:999px;
+              font-size:14px; cursor:pointer; user-select:none; background:#fafbfd}
+  .temas input:checked + span{background:var(--acc); border-color:var(--acc2); color:#1d1300; font-weight:600}
+  .temas input:focus-visible + span{outline:3px solid #9db4ff; outline-offset:2px}
+  textarea{width:100%; min-height:160px; resize:vertical; border:1px solid var(--line); border-radius:12px;
+           padding:12px; font:inherit; font-size:16px; /* 16px evita zoom automático no iPhone */
+           line-height:1.45; color:var(--ink); background:#fff}
+  textarea:focus{outline:3px solid #9db4ff; border-color:#7d95e8}
+  .row{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:6px;
+       font-size:13px; color:var(--mute)}
+  .hp{position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden}
+  button{width:100%; margin-top:16px; border:0; border-radius:12px; padding:14px 16px; font:inherit;
+         font-size:17px; font-weight:700; cursor:pointer; color:#1d1300;
+         background:linear-gradient(180deg,var(--acc),var(--acc2)); box-shadow:0 6px 18px rgba(224,122,46,.35)}
+  button:disabled{opacity:.6; cursor:wait}
+  .msg{margin-top:14px; padding:12px; border-radius:12px; font-size:15px; display:none}
+  .msg.ok{display:block; background:#eaf7f0; color:#1d6b43; border:1px solid #bfe5cf}
+  .msg.err{display:block; background:#fdecea; color:#8f2a20; border:1px solid #f3c4bf}
+  .done{text-align:center; padding:12px 4px}
+  .done .big{font-size:48px}
+  .done h2{margin:6px 0}
+  .done p{color:var(--mute); margin:6px 0 0}
+  .apoio{margin-top:16px; background:rgba(255,255,255,.08); color:#eef1ff; border:1px solid rgba(255,255,255,.18);
+         border-radius:14px; padding:14px; font-size:14px; line-height:1.5}
+  .apoio strong{color:#fff}
+  .apoio a{color:#ffd28a}
+  footer{color:#c9cfe8; text-align:center; font-size:12.5px; margin:16px 0 4px; line-height:1.5}
+  .hidden{display:none !important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="icon" aria-hidden="true">💬</div>
+    <h1>Caixa de Perguntas</h1>
+    <p>Pergunte o que quiser. Ninguém vai saber que foi você.</p>
+  </header>
+
+  <main class="card">
+    <section id="formArea">
+      <div class="badge" role="note">
+        <span aria-hidden="true">🔒</span>
+        <span><strong>100% anônimo.</strong> Não pedimos nome, e-mail nem telefone, e não registramos horário nem aparelho — só o dia.</span>
+      </div>
+
+      <form id="form" novalidate>
+        <label id="lblTema">Sobre o quê? <span style="font-weight:400;color:var(--mute)">(opcional)</span></label>
+        <div class="temas" role="radiogroup" aria-labelledby="lblTema">
+          <label><input type="radio" name="tema" value="Fé e Bíblia"><span>Fé e Bíblia</span></label>
+          <label><input type="radio" name="tema" value="Relacionamentos"><span>Relacionamentos</span></label>
+          <label><input type="radio" name="tema" value="Família"><span>Família</span></label>
+          <label><input type="radio" name="tema" value="Escolhas e futuro"><span>Escolhas e futuro</span></label>
+          <label><input type="radio" name="tema" value="Sentimentos"><span>Sentimentos</span></label>
+          <label><input type="radio" name="tema" value="Igreja"><span>Igreja</span></label>
+          <label><input type="radio" name="tema" value="Outro"><span>Outro</span></label>
+        </div>
+
+        <label for="pergunta">Sua pergunta ou dúvida</label>
+        <textarea id="pergunta" name="pergunta" required
+          placeholder="Escreva aqui com sinceridade. Não precisa se identificar."></textarea>
+        <div class="row">
+          <span>Evite citar nomes de pessoas.</span>
+          <span id="contador">0 / 1500</span>
+        </div>
+
+        <!-- armadilha para robôs: humanos não veem este campo -->
+        <div class="hp" aria-hidden="true">
+          <label for="site">Não preencha</label>
+          <input id="site" name="site" type="text" tabindex="-1" autocomplete="off">
+        </div>
+
+        <button id="btn" type="submit">Enviar anonimamente</button>
+        <div id="msg" class="msg" role="status" aria-live="polite"></div>
+      </form>
+    </section>
+
+    <section id="doneArea" class="done hidden" aria-live="polite">
+      <div class="big" aria-hidden="true">🙏</div>
+      <h2>Pergunta enviada!</h2>
+      <p>Obrigado pela coragem. Ela será respondida em um dos nossos encontros.</p>
+      <button id="outra" type="button">Enviar outra pergunta</button>
+    </section>
+  </main>
+
+  <aside class="apoio">
+    <strong>Está passando por algo pesado?</strong> Como aqui é anônimo, não temos como te procurar — então não guarde isso só pra você: <strong>procure a liderança.</strong><br>
+    Estamos de portas abertas para te ouvir e te acolher, <strong>seja qual for a sua situação</strong> — sem julgamento, sem exposição e no seu tempo. Você não precisa enfrentar nada sozinho.
+  </aside>
+
+  <footer>Ministério de Jovens · As perguntas são lidas apenas pela liderança.</footer>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const form = $('form'), txt = $('pergunta'), btn = $('btn'), msg = $('msg');
+  const MAX = CONFIG.MAX_CHARS;
+  txt.maxLength = MAX;
+
+  // Código opcional do grupo, vindo no link (?g=CODIGO). Não identifica ninguém: é o mesmo para todos.
+  const grupo = new URLSearchParams(location.search).get('g') || '';
+
+  const atualizar = () => { $('contador').textContent = txt.value.length + ' / ' + MAX; };
+  txt.addEventListener('input', atualizar); atualizar();
+
+  function mostrar(tipo, texto){ msg.className = 'msg ' + tipo; msg.textContent = texto; }
+
+  const ERROS = {
+    curta: 'Escreva um pouquinho mais (pelo menos 5 caracteres).',
+    codigo: 'Este link não está completo. Peça o link certo a um líder.',
+    limite: 'Muitas perguntas chegaram agora. Tente de novo em alguns minutos.',
+    interno: 'Não deu certo agora. Tente de novo em instantes.'
+  };
+
+  async function enviar(payload){
+    const corpo = JSON.stringify(payload);
+    try {
+      const r = await fetch(CONFIG.ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // evita preflight CORS
+        body: corpo, redirect: 'follow', credentials: 'omit', referrerPolicy: 'no-referrer'
+      });
+      return await r.json();
+    } catch (e) {
+      // Alguns navegadores bloqueiam a leitura da resposta do Google; envia mesmo assim, sem ler o retorno.
+      await fetch(CONFIG.ENDPOINT, { method:'POST', mode:'no-cors', body: corpo, credentials:'omit' });
+      return { ok: true, cego: true };
+    }
+  }
+
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const pergunta = txt.value.trim();
+    if (pergunta.length < 5) { mostrar('err', ERROS.curta); txt.focus(); return; }
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(CONFIG.ENDPOINT)) {
+      mostrar('err', 'Página ainda não configurada (falta a URL do Apps Script).'); return;
+    }
+    const temaSel = form.querySelector('input[name="tema"]:checked');
+    btn.disabled = true; btn.textContent = 'Enviando…'; msg.className = 'msg';
+    try {
+      const res = await enviar({
+        pergunta, tema: temaSel ? temaSel.value : '', g: grupo, site: $('site').value
+      });
+      if (res && res.ok) {
+        form.reset(); atualizar();
+        $('formArea').classList.add('hidden'); $('doneArea').classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        mostrar('err', ERROS[(res && res.erro)] || ERROS.interno);
+      }
+    } catch (e) {
+      mostrar('err', 'Sem conexão. Verifique a internet e tente de novo.');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Enviar anonimamente';
+    }
+  });
+
+  $('outra').addEventListener('click', () => {
+    $('doneArea').classList.add('hidden'); $('formArea').classList.remove('hidden'); txt.focus();
+  });
+})();
+</script>
+</body>
+</html>
